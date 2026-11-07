@@ -1,0 +1,45 @@
+# Maven build output
+target/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# Local environment variables and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# Local Spring configuration that may contain database credentials
+application-local.properties
+application-local.yaml
+application-local.yml
+application-secret.properties
+application-secret.yaml
+application-secret.yml
+
+# Local database files and dumps
+*.db
+*.sqlite
+*.sqlite3
+*.sql.gz
+*.dump
+
+# Personal TXT notes and guides
+*.txt
