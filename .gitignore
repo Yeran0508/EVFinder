@@ -40,6 +40,8 @@ application-secret.yml
 *.sqlite3
 *.sql.gz
 *.dump
+data/raw/
+data/processed/
 
 # Personal TXT notes and guides
 *.txt

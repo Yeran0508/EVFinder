@@ -1,0 +1,16 @@
+ID,Station Name,Street Address,City,State,ZIP,Latitude,Longitude,Status Code,Access Code,Access Days Time,Facility Type,EV Level1 EVSE Num,EV Level2 EVSE Num,EV DC Fast Count,EV Pricing,EV Network,EV Network Web,EV Connector Types
+40794,O'Hare International Airport - Lot A Main Parking Garage,10000 W O'Hare Ave,Chicago,IL,60666,41.97850582311076,-87.90328000006105,E,public,24 hours daily; pay lots,AIRPORT,,12,,Free,Non-Networked,,J1772
+149766,"Target T2613 (Chicago, IL)",1200 N Larrabee St,Chicago,IL,60610,41.90421,-87.64352,E,public,24 hours daily,,,,6,,Electrify America,https://www.electrifyamerica.com,J1772COMBO
+98760,Berman Nissan - Chicago,3456 N Kedzie Ave,Chicago,IL,60618,41.943604,-87.708327,E,public,Dealership business hours,CAR_DEALER,,1,1,Free,Non-Networked,,CHADEMO J1772
+46798,Arlington Nissan,1100 W Dundee Rd,Arlington Heights,IL,60004,42.139843,-87.996655,E,private,,CAR_DEALER,,1,1,Free,Non-Networked,,CHADEMO J1772 J1772COMBO
+49660,Lang's Auto Service,4947 Main St,Downers Grove,IL,60515,41.796821,-88.010142,E,private,,AUTO_REPAIR,,2,,,Non-Networked,,J1772 TESLA
+42460,Town of Normal - Fire Department Headquarters,606 S Main St,Normal,IL,61761,40.505132,-88.994211,E,private,,FIRE_STATION,,1,,,Non-Networked,,J1772
+60165,"EVANSTON, IL MAPLE AV GARAGE",1810 Maple Ave,Evanston,IL,60202,42.050171,-87.685127,E,public,24 hours daily,,,2,,,ChargePoint Network,https://www.chargepoint.com,J1772
+33921,City of Champaign - Hill Street Parking Deck,123 W Hill St,Champaign,IL,61820,40.119161,-88.244185,E,public,24 hours daily; pay lot,PAY_GARAGE,,4,,Free; pay lot,Non-Networked,,J1772
+42462,Beaufort Street Parking Deck,211 W Beaufort St,Normal,IL,61761,40.507954,-88.986429,E,public,24 hours daily; Drivers must bring their own J1772 cordset for Level 1 charging,HOTEL,1,2,,Free; parking fee,Non-Networked,,J1772 NEMA520
+46817,Bill Kay's Nissan - Downers Grove,1601 Ogden Ave,Downers Grove,IL,60515,41.807991,-88.024834,E,public,Dealership business hours,CAR_DEALER,,,1,Free,IN_CHARGE,https://inchargeus.com,CHADEMO J1772COMBO
+47199,Liberty Nissan,920 S Milwaukee Ave,Libertyville,IL,60048,42.271507,-87.949509,E,public,24 hours daily,CAR_DEALER,,1,1,,ChargePoint Network,https://www.chargepoint.com,CHADEMO J1772 J1772COMBO
+95170,Mariano's - Frankfort IL,21001 S LaGrange Rd,Frankfort,IL,60423,41.50691586,-87.8029832,E,public,24 hours daily,,,1,,Free,Blink Network,https://blinkcharging.com,J1772
+102152,"North Aurora, IL - Tesla Supercharger",151 Hansen Blvd,North Aurora,IL,60542,41.803008,-88.370446,E,public,24 hours daily. Open to Teslas only.,GROCERY,,,16,,Tesla,https://www.tesla.com/supercharger,TESLA
+103918,Lewis & Clark Community College - Weber Workforce Parking Lot,5800 Godfrey Rd,Godfrey,IL,62035,38.953293,-90.200095,E,public,24 hours daily; visit security desk after normal business hours to use,COLLEGE_CAMPUS,,,1,Free,Non-Networked,,CHADEMO J1772COMBO
+114141,"Hilton Garden Inn, Addison - Tesla Destination",551 N Swift Rd,Addison,IL,60101,41.9364472,-88.0390738,E,public,24 hours daily. Open to Teslas only.,HOTEL,,3,,Free,Tesla Destination,https://www.tesla.com/destination-charging,TESLA

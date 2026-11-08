@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: evfinder
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: jdbc:mysql://localhost:${MYSQL_PORT:3307}/${MYSQL_DATABASE:evfinder}?serverTimezone=UTC
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+

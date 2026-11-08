@@ -23,7 +23,7 @@ EVFinder 是一个面向美国电动车车主的充电站检索与推荐平台�
 
 ## 当前状态
 
-项目初始化中：已完成 Maven 校验与编译、Spring Boot 启动、健康检查 API 及其自动化测试，并已定义初版 API Contract。Docker 数据库环境、业务 API 和前端尚未实现。
+项目初始化中：已完成 Maven 校验与编译、Spring Boot 启动、健康检查 API 及其自动化测试，并已定义初版 API Contract。Docker MySQL、初始数据库表以及 Spring Boot 数据库连接已经完成；业务 API、数据导入和前端尚未实现。
 
 ## 规划技术栈
 
@@ -32,8 +32,37 @@ EVFinder 是一个面向美国电动车车主的充电站检索与推荐平台�
 - Docker Compose
 - 前端框架待在前端阶段决定
 
+## Local MySQL
+
+EVFinder uses Docker Compose to run MySQL 8.4 in an isolated local environment.
+
+```bash
+cp .env.example .env
+docker compose up -d mysql
+docker compose ps
+```
+
+The container exposes MySQL at `localhost:3307` to avoid conflicting with a local MySQL server on port `3306`.
+
+Stop the database while keeping its data:
+
+```bash
+docker compose stop
+```
+
+Remove the container while keeping the named volume:
+
+```bash
+docker compose down
+```
+
+Do not run `docker compose down -v` unless the local database data should be permanently deleted.
+
 ## 文档
 
 - [产品需求与开发范围](docs/requirements.md)
 - [API Contract](docs/api-contract.md)
+- [Database Design](docs/database/README.md)
+- [Data Source Plan](docs/database/data-source-plan.md)
+- [AFDC Import Mapping](docs/database/afdc-import-mapping.md)
 - [学习笔记](EVFinder学习笔记.txt)
