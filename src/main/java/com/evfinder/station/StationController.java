@@ -20,9 +20,13 @@ public class StationController {
     public StationSearchResponse searchByCity(
             @RequestParam String city,
             @RequestParam(required = false) String connectorType,
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) String order,
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(required = false) String cursor) {
-        return stationService.search(city, connectorType, limit, cursor);
+        return sort == null && order == null
+                ? stationService.search(city, connectorType, limit, cursor)
+                : stationService.search(city, connectorType, sort, order, limit, cursor);
     }
 
     @GetMapping("/{stationId}")

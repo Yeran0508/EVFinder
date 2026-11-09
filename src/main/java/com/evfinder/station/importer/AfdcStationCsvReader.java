@@ -35,7 +35,7 @@ public class AfdcStationCsvReader {
         return new AfdcStationRecord(
                 required(row, "ID"),
                 required(row, "Station Name"),
-                required(row, "Street Address"),
+                optional(row, "Street Address"),
                 required(row, "City"),
                 required(row, "State"),
                 optional(row, "ZIP"),

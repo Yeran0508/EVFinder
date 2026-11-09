@@ -1,5 +1,6 @@
 package com.evfinder.station;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,14 +26,17 @@ public class StationService {
     private final StationRepository stationRepository;
     private final ConnectorRepository connectorRepository;
     private final StationCursorCodec cursorCodec;
+    private final StationRatingCursorCodec ratingCursorCodec;
 
     public StationService(
             StationRepository stationRepository,
             ConnectorRepository connectorRepository,
-            StationCursorCodec cursorCodec) {
+            StationCursorCodec cursorCodec,
+            StationRatingCursorCodec ratingCursorCodec) {
         this.stationRepository = stationRepository;
         this.connectorRepository = connectorRepository;
         this.cursorCodec = cursorCodec;
+        this.ratingCursorCodec = ratingCursorCodec;
     }
 
     @Transactional(readOnly = true)
@@ -84,6 +88,65 @@ public class StationService {
     }
 
     @Transactional(readOnly = true)
+    public StationSearchResponse search(
+            String city,
+            String connectorType,
+            String sort,
+            String order,
+            int limit,
+            String cursor) {
+        if (!"rating".equalsIgnoreCase(sort)) {
+            throw new IllegalArgumentException("unsupported sort");
+        }
+        String normalizedOrder = order == null ? "desc" : order.trim().toLowerCase(Locale.ROOT);
+        if (!normalizedOrder.equals("asc") && !normalizedOrder.equals("desc")) {
+            throw new IllegalArgumentException("order must be asc or desc");
+        }
+        validateSearch(city, limit);
+
+        String normalizedCity = city.trim();
+        String normalizedConnectorType = normalizeConnectorType(connectorType);
+        StationRatingCursorCodec.RatingCursor decodedCursor = ratingCursorCodec.decode(cursor, normalizedOrder);
+        List<StationRepository.StationRatingView> ratingRows = stationRepository.findByCityOrderByRating(
+                normalizedCity,
+                normalizedConnectorType,
+                normalizedOrder,
+                decodedCursor.ratingSortValue(),
+                decodedCursor.stationId(),
+                PageRequest.of(0, limit + 1));
+
+        boolean hasMore = ratingRows.size() > limit;
+        List<StationRepository.StationRatingView> pageRows = hasMore
+                ? ratingRows.subList(0, limit)
+                : ratingRows;
+        List<Long> stationIds = pageRows.stream()
+                .map(StationRepository.StationRatingView::getStationId)
+                .toList();
+        Map<Long, Station> stationsById = new HashMap<>();
+        stationRepository.findAllById(stationIds)
+                .forEach(station -> stationsById.put(station.getStationId(), station));
+        Map<Long, List<String>> connectorTypesByStationId = loadConnectorTypes(
+                stationIds.stream().map(stationsById::get).toList());
+
+        List<StationResponse> items = pageRows.stream()
+                .map(row -> toResponse(
+                        stationsById.get(row.getStationId()),
+                        connectorTypesByStationId.getOrDefault(row.getStationId(), List.of()),
+                        row.getAverageRating(),
+                        row.getReviewCount()))
+                .toList();
+        String nextCursor = null;
+        if (hasMore) {
+            StationRepository.StationRatingView last = pageRows.getLast();
+            BigDecimal sortValue = last.getAverageRating() == null
+                    ? new BigDecimal(normalizedOrder.equals("desc") ? "-1" : "6")
+                    : last.getAverageRating();
+            nextCursor = ratingCursorCodec.encode(normalizedOrder, sortValue, last.getStationId());
+        }
+        return new StationSearchResponse(items, nextCursor);
+    }
+
+    @Transactional(readOnly = true)
     public StationDetailResponse getStation(long stationId) {
         if (stationId <= 0) {
             throw new IllegalArgumentException("stationId must be positive");
@@ -99,6 +162,8 @@ public class StationService {
                         connector.getConnectorCount(),
                         connector.getMaxPowerKw()))
                 .toList();
+        StationRepository.StationRatingSummary rating = stationRepository
+                .findRatingSummaryByStationId(stationId);
 
         return new StationDetailResponse(
                 station.getStationId(),
@@ -109,8 +174,8 @@ public class StationService {
                 station.getLatitude(),
                 station.getLongitude(),
                 connectors,
-                null,
-                0);
+                rating.getAverageRating(),
+                rating.getReviewCount());
     }
 
     private String normalizeConnectorType(String connectorType) {
@@ -144,6 +209,14 @@ public class StationService {
     }
 
     private StationResponse toResponse(Station station, List<String> connectorTypes) {
+        return toResponse(station, connectorTypes, null, 0L);
+    }
+
+    private StationResponse toResponse(
+            Station station,
+            List<String> connectorTypes,
+            BigDecimal averageRating,
+            long reviewCount) {
         return new StationResponse(
                 station.getStationId(),
                 station.getStationName(),
@@ -151,16 +224,24 @@ public class StationService {
                 station.getCity(),
                 connectorTypes,
                 null,
-                null,
-                0);
+                averageRating,
+                reviewCount);
+    }
+
+    private void validateSearch(String city, int limit) {
+        if (city == null || city.isBlank()) {
+            throw new IllegalArgumentException("city is required");
+        }
+        if (limit < 1 || limit > MAX_LIMIT) {
+            throw new IllegalArgumentException("limit must be between 1 and 100");
+        }
     }
 
     private String formatAddress(Station station) {
         String zipCode = station.getZipCode() == null ? "" : " " + station.getZipCode();
-        return "%s, %s, %s%s".formatted(
-                station.getStreetAddress(),
-                station.getCity(),
-                station.getState(),
-                zipCode);
+        String cityAndState = "%s, %s%s".formatted(station.getCity(), station.getState(), zipCode);
+        return station.getStreetAddress() == null
+                ? cityAndState
+                : "%s, %s".formatted(station.getStreetAddress(), cityAndState);
     }
 }

@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | `ID` | `charging_stations.external_id` | Required; stored as text and used as the idempotency key |
 | `Station Name` | `charging_stations.station_name` | Required; trim surrounding whitespace |
-| `Street Address` | `charging_stations.street_address` | Required in the first importer; reject the row if missing |
+| `Street Address` | `charging_stations.street_address` | Optional; missing remains `NULL` rather than inventing an address |
 | `City` | `charging_stations.city` | Required |
 | `State` | `charging_stations.state` | Required; two-letter code |
 | `ZIP` | `charging_stations.zip_code` | Stored as text to preserve leading zeroes |
@@ -14,7 +14,7 @@
 | `Longitude` | `charging_stations.longitude` | Required; range -180 to 180 |
 | `Status Code` | `charging_stations.status_code` | Optional source code |
 | `Access Code` | `charging_stations.access_code` | Optional; currently `public` or `private` |
-| `Access Days Time` | `charging_stations.access_days_time` | Optional |
+| `Access Days Time` | `charging_stations.access_days_time` | Optional free-form text; stored as `TEXT` because real source values can exceed 255 characters |
 | `Facility Type` | `charging_stations.facility_type` | Optional |
 | `EV Level1 EVSE Num` | `charging_stations.level1_evse_count` | Missing becomes zero |
 | `EV Level2 EVSE Num` | `charging_stations.level2_evse_count` | Missing becomes zero |
@@ -45,6 +45,8 @@
 Unknown connector codes reject the row instead of being silently discarded.
 
 The CSV does not provide reliable connector-level count or power. The importer therefore stores `NULL` for `station_connectors.connector_count` and `max_power_kw`. Station-level Level 1, Level 2, and DC Fast totals are preserved on `charging_stations`.
+
+`NULL` means "unknown from the source". EVFinder does not generate random power values for product data. Connector-level power can be populated later only from a source that identifies both the station connector and its rated power, with source provenance and a last-verified time.
 
 ## Repeat Import Behavior
 

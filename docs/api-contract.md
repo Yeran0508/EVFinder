@@ -46,7 +46,7 @@ Query parameters:
 | --- | --- | --- | --- |
 | `city` | string | Yes | City name, such as `Chicago` |
 | `connectorType` | string | No | `CCS`, `CHAdeMO`, or `J1772` |
-| `sort` | string | No | `power` or `rating`; default: `power` |
+| `sort` | string | No | `rating`; omit for stable station-ID order |
 | `order` | string | No | `asc` or `desc`; default: `desc` |
 | `limit` | integer | No | 1 to 100; default: 20 |
 | `cursor` | string | No | Cursor for the next page |
@@ -54,7 +54,7 @@ Query parameters:
 Example:
 
 ```http
-GET /api/v1/stations?city=Chicago&connectorType=CCS&sort=power&order=desc&limit=20
+GET /api/v1/stations?city=Chicago&connectorType=CCS&sort=rating&order=desc&limit=20
 ```
 
 Response: `200 OK`

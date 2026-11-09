@@ -155,6 +155,22 @@ class StationControllerTest {
     }
 
     @Test
+    void passesRatingSortAndOrderToService() throws Exception {
+        when(stationService.search("Chicago", "CCS", "rating", "asc", 20, null))
+                .thenReturn(new StationSearchResponse(List.of(), null));
+
+        mockMvc.perform(get("/api/v1/stations")
+                        .param("city", "Chicago")
+                        .param("connectorType", "CCS")
+                        .param("sort", "rating")
+                        .param("order", "asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isEmpty());
+
+        verify(stationService).search("Chicago", "CCS", "rating", "asc", 20, null);
+    }
+
+    @Test
     void returnsBadRequestForInvalidCursor() throws Exception {
         when(stationService.search("Chicago", null, 20, "invalid"))
                 .thenThrow(new IllegalArgumentException("invalid cursor"));

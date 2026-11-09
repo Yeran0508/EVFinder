@@ -27,7 +27,7 @@ public class Station {
     @Column(name = "station_name", nullable = false, length = 255)
     private String stationName;
 
-    @Column(name = "street_address", nullable = false, length = 255)
+    @Column(name = "street_address", length = 255)
     private String streetAddress;
 
     @Column(nullable = false, length = 100)

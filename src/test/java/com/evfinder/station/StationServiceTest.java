@@ -20,8 +20,9 @@ class StationServiceTest {
     private final StationRepository stationRepository = mock(StationRepository.class);
     private final ConnectorRepository connectorRepository = mock(ConnectorRepository.class);
     private final StationCursorCodec cursorCodec = new StationCursorCodec();
+    private final StationRatingCursorCodec ratingCursorCodec = new StationRatingCursorCodec();
     private final StationService stationService = new StationService(
-            stationRepository, connectorRepository, cursorCodec);
+            stationRepository, connectorRepository, cursorCodec, ratingCursorCodec);
 
     @Test
     void searchesByTrimmedCityAndMapsResponse() {
@@ -177,6 +178,10 @@ class StationServiceTest {
         when(connector.getConnectorCount()).thenReturn(2);
         when(connector.getMaxPowerKw()).thenReturn(new BigDecimal("150.00"));
         when(connectorRepository.findConnectorDetailsByStationId(10L)).thenReturn(List.of(connector));
+        StationRepository.StationRatingSummary rating = mock(StationRepository.StationRatingSummary.class);
+        when(rating.getAverageRating()).thenReturn(new BigDecimal("4.50"));
+        when(rating.getReviewCount()).thenReturn(2L);
+        when(stationRepository.findRatingSummaryByStationId(10L)).thenReturn(rating);
 
         StationDetailResponse result = stationService.getStation(10L);
 
@@ -184,6 +189,73 @@ class StationServiceTest {
         assertThat(result.address()).isEqualTo("100 Main Street, Chicago, IL 60601");
         assertThat(result.connectors()).containsExactly(
                 new StationConnectorResponse("CCS", 2, new BigDecimal("150.00")));
+        assertThat(result.averageRating()).isEqualByComparingTo("4.50");
+        assertThat(result.reviewCount()).isEqualTo(2);
+    }
+
+    @Test
+    void formatsUnknownStreetAddressWithoutLiteralNull() {
+        Station station = mock(Station.class);
+        when(station.getStationId()).thenReturn(11L);
+        when(station.getStationName()).thenReturn("Address Unknown Station");
+        when(station.getCity()).thenReturn("Chicago");
+        when(station.getState()).thenReturn("IL");
+        when(station.getZipCode()).thenReturn("60601");
+        when(station.getLatitude()).thenReturn(new BigDecimal("41.100000"));
+        when(station.getLongitude()).thenReturn(new BigDecimal("-87.100000"));
+        when(stationRepository.findById(11L)).thenReturn(Optional.of(station));
+        when(connectorRepository.findConnectorDetailsByStationId(11L)).thenReturn(List.of());
+        StationRepository.StationRatingSummary rating = mock(StationRepository.StationRatingSummary.class);
+        when(rating.getReviewCount()).thenReturn(0L);
+        when(stationRepository.findRatingSummaryByStationId(11L)).thenReturn(rating);
+
+        StationDetailResponse result = stationService.getStation(11L);
+
+        assertThat(result.address()).isEqualTo("Chicago, IL 60601");
+    }
+
+    @Test
+    void sortsByRatingAndReturnsRatingCursor() {
+        StationRepository.StationRatingView first = mock(StationRepository.StationRatingView.class);
+        StationRepository.StationRatingView second = mock(StationRepository.StationRatingView.class);
+        when(first.getStationId()).thenReturn(10L);
+        when(first.getAverageRating()).thenReturn(new BigDecimal("4.50"));
+        when(first.getReviewCount()).thenReturn(2L);
+        when(second.getStationId()).thenReturn(11L);
+        when(second.getAverageRating()).thenReturn(new BigDecimal("4.00"));
+        when(second.getReviewCount()).thenReturn(1L);
+        when(stationRepository.findByCityOrderByRating(
+                "Chicago", null, "desc", new BigDecimal("6"), 0, PageRequest.of(0, 2)))
+                .thenReturn(List.of(first, second));
+        Station station = mock(Station.class);
+        when(station.getStationId()).thenReturn(10L);
+        when(station.getStationName()).thenReturn("Rated Station");
+        when(station.getStreetAddress()).thenReturn("1 Main Street");
+        when(station.getCity()).thenReturn("Chicago");
+        when(station.getState()).thenReturn("IL");
+        when(stationRepository.findAllById(List.of(10L))).thenReturn(List.of(station));
+        when(connectorRepository.findConnectorNamesByStationIds(List.of(10L))).thenReturn(List.of());
+
+        StationSearchResponse result = stationService.search(
+                "Chicago", null, "rating", "desc", 1, null);
+
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.items().getFirst().averageRating()).isEqualByComparingTo("4.50");
+        assertThat(result.items().getFirst().reviewCount()).isEqualTo(2);
+        assertThat(result.nextCursor()).isEqualTo(
+                ratingCursorCodec.encode("desc", new BigDecimal("4.50"), 10L));
+    }
+
+    @Test
+    void rejectsUnsupportedRatingSortOrder() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> stationService.search(
+                        "Chicago", null, "rating", "sideways", 20, null))
+                .withMessage("order must be asc or desc");
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> stationService.search(
+                        "Chicago", null, "power", "desc", 20, null))
+                .withMessage("unsupported sort");
     }
 
     @Test

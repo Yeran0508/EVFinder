@@ -23,7 +23,7 @@ EVFinder 是一个面向美国电动车车主的充电站检索与推荐平台�
 
 ## 当前状态
 
-项目初始化中：已完成 Maven 校验与编译、Spring Boot 启动、健康检查 API 及其自动化测试，并已定义初版 API Contract。Docker MySQL、初始数据库表以及 Spring Boot 数据库连接已经完成；业务 API、数据导入和前端尚未实现。
+后端 MVP 主链路已经完成：Docker MySQL、AFDC CSV 幂等导入、城市与接口类型搜索、Cursor Pagination、站点详情、评价提交与列表、评分聚合及评分排序。当前本地数据集包含 2,079 个 Illinois 充电站，完整自动化测试连接本地 MySQL 运行。前端、地理半径搜索、Redis 和部署尚未实现。
 
 ## 规划技术栈
 
@@ -43,6 +43,34 @@ docker compose ps
 ```
 
 The container exposes MySQL at `localhost:3307` to avoid conflicting with a local MySQL server on port `3306`.
+
+Run the test suite:
+
+```bash
+./mvnw test
+```
+
+Start the API:
+
+```bash
+./mvnw spring-boot:run
+```
+
+Import an AFDC CSV file. The file is intentionally not committed to Git:
+
+```bash
+./mvnw spring-boot:run \
+  -Dspring-boot.run.arguments="--evfinder.import.file=/path/to/afdc-stations.csv --server.port=0"
+```
+
+Core endpoints:
+
+- `GET /api/v1/health`
+- `GET /api/v1/stations?city=Chicago`
+- `GET /api/v1/stations?city=Chicago&connectorType=CCS&sort=rating&order=desc`
+- `GET /api/v1/stations/{stationId}`
+- `GET /api/v1/stations/{stationId}/reviews`
+- `POST /api/v1/stations/{stationId}/reviews`
 
 Stop the database while keeping its data:
 
@@ -65,4 +93,5 @@ Do not run `docker compose down -v` unless the local database data should be per
 - [Database Design](docs/database/README.md)
 - [Data Source Plan](docs/database/data-source-plan.md)
 - [AFDC Import Mapping](docs/database/afdc-import-mapping.md)
+- [Station Search Query Plan](docs/database/query-plan.md)
 - [学习笔记](EVFinder学习笔记.txt)
