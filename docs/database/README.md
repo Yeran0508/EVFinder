@@ -22,8 +22,9 @@ erDiagram
 
     USERS {
         BIGINT user_id PK
-        VARCHAR email UK
-        VARCHAR password_hash
+        VARCHAR external_id UK
+        VARCHAR email UK "nullable until authentication is implemented"
+        VARCHAR password_hash "nullable until authentication is implemented"
         VARCHAR display_name
     }
 

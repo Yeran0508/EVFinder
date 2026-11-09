@@ -4,7 +4,7 @@ spring:
   config:
     import: optional:file:.env[.properties]
   datasource:
-    url: jdbc:mysql://localhost:${MYSQL_PORT:3307}/${MYSQL_DATABASE:evfinder}?serverTimezone=UTC
+    url: jdbc:mysql://localhost:${MYSQL_PORT:3307}/${MYSQL_DATABASE:evfinder}?serverTimezone=UTC&useAffectedRows=true
     username: ${MYSQL_USER}
     password: ${MYSQL_PASSWORD}
   jpa:

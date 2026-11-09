@@ -1,11 +1,13 @@
 CREATE TABLE users (
     user_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    email VARCHAR(254) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    external_id VARCHAR(64) NOT NULL,
+    email VARCHAR(254),
+    password_hash VARCHAR(255),
     display_name VARCHAR(100) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id),
+    UNIQUE KEY uk_users_external_id (external_id),
     UNIQUE KEY uk_users_email (email)
 );
 
