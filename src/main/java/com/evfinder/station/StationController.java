@@ -1,11 +1,10 @@
 package com.evfinder.station;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/v1/stations")
@@ -18,11 +17,16 @@ public class StationController {
     }
 
     @GetMapping
-    public StationSearchResponse searchByCity(@RequestParam String city) {
-        if (city.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "city is required");
-        }
+    public StationSearchResponse searchByCity(
+            @RequestParam String city,
+            @RequestParam(required = false) String connectorType,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String cursor) {
+        return stationService.search(city, connectorType, limit, cursor);
+    }
 
-        return new StationSearchResponse(stationService.searchByCity(city), null);
+    @GetMapping("/{stationId}")
+    public StationDetailResponse getStation(@PathVariable long stationId) {
+        return stationService.getStation(stationId);
     }
 }
