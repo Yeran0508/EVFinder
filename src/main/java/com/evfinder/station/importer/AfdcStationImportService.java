@@ -22,11 +22,12 @@ public class AfdcStationImportService {
 
     @Transactional
     public ImportResult importFile(Path path) throws IOException {
-        List<AfdcStationRecord> records = csvReader.read(path);
+        AfdcStationCsvReader.ReadResult readResult = csvReader.readWithMetadata(path);
+        List<AfdcStationRecord> records = readResult.stations();
         for (AfdcStationRecord record : records) {
             importStation(record);
         }
-        return new ImportResult(records.size(), records.size());
+        return new ImportResult(readResult.sourceRows(), records.size());
     }
 
     private void importStation(AfdcStationRecord station) {
@@ -80,7 +81,7 @@ public class AfdcStationImportService {
             jdbcTemplate.update(
                     "INSERT INTO station_connectors "
                             + "(station_id, connector_id, connector_count, max_power_kw) VALUES (?, ?, ?, ?)",
-                    new Object[] {stationId, connectorId, null, null},
+                    new Object[] {stationId, connectorId, connector.count(), connector.maxPowerKw()},
                     new int[] {Types.BIGINT, Types.BIGINT, Types.INTEGER, Types.DECIMAL});
         }
     }

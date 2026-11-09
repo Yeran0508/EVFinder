@@ -59,8 +59,15 @@ Start the API:
 Import an AFDC CSV file. The file is intentionally not committed to Git:
 
 ```bash
+set -a
+source .env
+set +a
+curl --fail --location \
+  "https://developer.nlr.gov/api/alt-fuel-stations/v1/ev-charging-units.csv?api_key=${NLR_API_KEY}&state=IL" \
+  --output data/raw/afdc_ev_charging_units_il.csv
+
 ./mvnw spring-boot:run \
-  -Dspring-boot.run.arguments="--evfinder.import.file=/path/to/afdc-stations.csv --server.port=0"
+  -Dspring-boot.run.arguments="--evfinder.import.file=data/raw/afdc_ev_charging_units_il.csv --server.port=0"
 ```
 
 Core endpoints:
@@ -68,6 +75,7 @@ Core endpoints:
 - `GET /api/v1/health`
 - `GET /api/v1/stations?city=Chicago`
 - `GET /api/v1/stations?city=Chicago&connectorType=CCS&sort=rating&order=desc`
+- `GET /api/v1/stations?city=Chicago&connectorType=CCS&sort=power&order=desc`
 - `GET /api/v1/stations/{stationId}`
 - `GET /api/v1/stations/{stationId}/reviews`
 - `POST /api/v1/stations/{stationId}/reviews`

@@ -21,8 +21,9 @@ class StationServiceTest {
     private final ConnectorRepository connectorRepository = mock(ConnectorRepository.class);
     private final StationCursorCodec cursorCodec = new StationCursorCodec();
     private final StationRatingCursorCodec ratingCursorCodec = new StationRatingCursorCodec();
+    private final StationPowerCursorCodec powerCursorCodec = new StationPowerCursorCodec();
     private final StationService stationService = new StationService(
-            stationRepository, connectorRepository, cursorCodec, ratingCursorCodec);
+            stationRepository, connectorRepository, cursorCodec, ratingCursorCodec, powerCursorCodec);
 
     @Test
     void searchesByTrimmedCityAndMapsResponse() {
@@ -235,6 +236,11 @@ class StationServiceTest {
         when(station.getState()).thenReturn("IL");
         when(stationRepository.findAllById(List.of(10L))).thenReturn(List.of(station));
         when(connectorRepository.findConnectorNamesByStationIds(List.of(10L))).thenReturn(List.of());
+        StationRepository.StationMetricsView metrics = mock(StationRepository.StationMetricsView.class);
+        when(metrics.getStationId()).thenReturn(10L);
+        when(metrics.getAverageRating()).thenReturn(new BigDecimal("4.50"));
+        when(metrics.getReviewCount()).thenReturn(2L);
+        when(stationRepository.findMetricsByStationIds(List.of(10L))).thenReturn(List.of(metrics));
 
         StationSearchResponse result = stationService.search(
                 "Chicago", null, "rating", "desc", 1, null);
@@ -247,15 +253,48 @@ class StationServiceTest {
     }
 
     @Test
-    void rejectsUnsupportedRatingSortOrder() {
+    void rejectsUnsupportedSortOrder() {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> stationService.search(
                         "Chicago", null, "rating", "sideways", 20, null))
                 .withMessage("order must be asc or desc");
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> stationService.search(
-                        "Chicago", null, "power", "desc", 20, null))
+                        "Chicago", null, "distance", "desc", 20, null))
                 .withMessage("unsupported sort");
+    }
+
+    @Test
+    void sortsByPowerAndReturnsPowerCursor() {
+        StationRepository.StationPowerView first = mock(StationRepository.StationPowerView.class);
+        StationRepository.StationPowerView second = mock(StationRepository.StationPowerView.class);
+        when(first.getStationId()).thenReturn(10L);
+        when(first.getMaxPowerKw()).thenReturn(new BigDecimal("350.00"));
+        when(second.getStationId()).thenReturn(11L);
+        when(second.getMaxPowerKw()).thenReturn(new BigDecimal("150.00"));
+        when(stationRepository.findByCityOrderByPower(
+                "Chicago", "CCS", "desc", BigDecimal.ZERO, 0, PageRequest.of(0, 2)))
+                .thenReturn(List.of(first, second));
+        Station station = mock(Station.class);
+        when(station.getStationId()).thenReturn(10L);
+        when(station.getStationName()).thenReturn("Fast Station");
+        when(station.getStreetAddress()).thenReturn("1 Main Street");
+        when(station.getCity()).thenReturn("Chicago");
+        when(station.getState()).thenReturn("IL");
+        when(stationRepository.findAllById(List.of(10L))).thenReturn(List.of(station));
+        when(connectorRepository.findConnectorNamesByStationIds(List.of(10L))).thenReturn(List.of());
+        StationRepository.StationMetricsView metrics = mock(StationRepository.StationMetricsView.class);
+        when(metrics.getStationId()).thenReturn(10L);
+        when(metrics.getMaxPowerKw()).thenReturn(new BigDecimal("350.00"));
+        when(stationRepository.findMetricsByStationIds(List.of(10L))).thenReturn(List.of(metrics));
+
+        StationSearchResponse result = stationService.search(
+                "Chicago", "CCS", "power", "desc", 1, null);
+
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.items().getFirst().maxPowerKw()).isEqualByComparingTo("350.00");
+        assertThat(result.nextCursor()).isEqualTo(
+                powerCursorCodec.encode("desc", new BigDecimal("350.00"), 10L));
     }
 
     @Test

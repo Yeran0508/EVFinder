@@ -38,15 +38,27 @@
 | `J1772COMBO` | `CCS` |
 | `CHADEMO` | `CHAdeMO` |
 | `TESLA` | `NACS` |
+| `J3400` | `NACS` |
+| `J3271` | `MCS` |
 | `NEMA1450` | `NEMA 14-50` |
 | `NEMA515` | `NEMA 5-15` |
 | `NEMA520` | `NEMA 5-20` |
 
 Unknown connector codes reject the row instead of being silently discarded.
 
-The CSV does not provide reliable connector-level count or power. The importer therefore stores `NULL` for `station_connectors.connector_count` and `max_power_kw`. Station-level Level 1, Level 2, and DC Fast totals are preserved on `charging_stations`.
+The station snapshot does not provide reliable connector-level count or power, so those values originally remained `NULL`. EVFinder now enriches the station data with the official AFDC EV Charging Units CSV. That file may contain multiple unit rows for one station and connector type.
 
-`NULL` means "unknown from the source". EVFinder does not generate random power values for product data. Connector-level power can be populated later only from a source that identifies both the station connector and its rated power, with source provenance and a last-verified time.
+| Charging Units CSV column | EVFinder target | Aggregation rule |
+| --- | --- | --- |
+| `J1772 Count` / `J1772 Power Output` | J1772 association | Sum count; maximum non-null power |
+| `CCS Count` / `CCS Power Output` | CCS association | Sum count; maximum non-null power |
+| `CHAdeMO Count` / `CHAdeMO Power Output` | CHAdeMO association | Sum count; maximum non-null power |
+| `J3400 Count` / `J3400 Power Output` | NACS association | Sum count; maximum non-null power |
+| `J3271 Count` / `J3271 Power Output` | MCS association | Sum count; maximum non-null power |
+
+Counts are summed because each source row describes charging units at the station. Power uses `MAX`, not `SUM`, because kW is a rating rather than an amount of equipment. Missing values remain `NULL`; EVFinder never generates random product data.
+
+`NULL` still means "unknown from the source". A station may therefore have a known connector count but unknown power.
 
 ## Repeat Import Behavior
 

@@ -21,22 +21,26 @@ public class StationService {
     private static final Map<String, String> CONNECTOR_TYPES = Map.of(
             "ccs", "CCS",
             "chademo", "CHAdeMO",
-            "j1772", "J1772");
+            "j1772", "J1772",
+            "nacs", "NACS");
 
     private final StationRepository stationRepository;
     private final ConnectorRepository connectorRepository;
     private final StationCursorCodec cursorCodec;
     private final StationRatingCursorCodec ratingCursorCodec;
+    private final StationPowerCursorCodec powerCursorCodec;
 
     public StationService(
             StationRepository stationRepository,
             ConnectorRepository connectorRepository,
             StationCursorCodec cursorCodec,
-            StationRatingCursorCodec ratingCursorCodec) {
+            StationRatingCursorCodec ratingCursorCodec,
+            StationPowerCursorCodec powerCursorCodec) {
         this.stationRepository = stationRepository;
         this.connectorRepository = connectorRepository;
         this.cursorCodec = cursorCodec;
         this.ratingCursorCodec = ratingCursorCodec;
+        this.powerCursorCodec = powerCursorCodec;
     }
 
     @Transactional(readOnly = true)
@@ -76,10 +80,12 @@ public class StationService {
         boolean hasMore = stations.size() > limit;
         List<Station> pageStations = hasMore ? stations.subList(0, limit) : stations;
         Map<Long, List<String>> connectorTypesByStationId = loadConnectorTypes(pageStations);
+        Map<Long, StationRepository.StationMetricsView> metricsByStationId = loadMetrics(pageStations);
         List<StationResponse> items = pageStations.stream()
                 .map(station -> toResponse(
                         station,
-                        connectorTypesByStationId.getOrDefault(station.getStationId(), List.of())))
+                        connectorTypesByStationId.getOrDefault(station.getStationId(), List.of()),
+                        metricsByStationId.get(station.getStationId())))
                 .toList();
         String nextCursor = hasMore
                 ? cursorCodec.encode(pageStations.getLast().getStationId())
@@ -95,7 +101,8 @@ public class StationService {
             String order,
             int limit,
             String cursor) {
-        if (!"rating".equalsIgnoreCase(sort)) {
+        String normalizedSort = sort == null ? "" : sort.trim().toLowerCase(Locale.ROOT);
+        if (!normalizedSort.equals("rating") && !normalizedSort.equals("power")) {
             throw new IllegalArgumentException("unsupported sort");
         }
         String normalizedOrder = order == null ? "desc" : order.trim().toLowerCase(Locale.ROOT);
@@ -106,6 +113,11 @@ public class StationService {
 
         String normalizedCity = city.trim();
         String normalizedConnectorType = normalizeConnectorType(connectorType);
+        if (normalizedSort.equals("power")) {
+            return searchByPower(
+                    normalizedCity, normalizedConnectorType, normalizedOrder, limit, cursor);
+        }
+
         StationRatingCursorCodec.RatingCursor decodedCursor = ratingCursorCodec.decode(cursor, normalizedOrder);
         List<StationRepository.StationRatingView> ratingRows = stationRepository.findByCityOrderByRating(
                 normalizedCity,
@@ -127,13 +139,14 @@ public class StationService {
                 .forEach(station -> stationsById.put(station.getStationId(), station));
         Map<Long, List<String>> connectorTypesByStationId = loadConnectorTypes(
                 stationIds.stream().map(stationsById::get).toList());
+        Map<Long, StationRepository.StationMetricsView> metricsByStationId = loadMetrics(
+                stationIds.stream().map(stationsById::get).toList());
 
         List<StationResponse> items = pageRows.stream()
                 .map(row -> toResponse(
                         stationsById.get(row.getStationId()),
                         connectorTypesByStationId.getOrDefault(row.getStationId(), List.of()),
-                        row.getAverageRating(),
-                        row.getReviewCount()))
+                        metricsByStationId.get(row.getStationId())))
                 .toList();
         String nextCursor = null;
         if (hasMore) {
@@ -142,6 +155,46 @@ public class StationService {
                     ? new BigDecimal(normalizedOrder.equals("desc") ? "-1" : "6")
                     : last.getAverageRating();
             nextCursor = ratingCursorCodec.encode(normalizedOrder, sortValue, last.getStationId());
+        }
+        return new StationSearchResponse(items, nextCursor);
+    }
+
+    private StationSearchResponse searchByPower(
+            String city,
+            String connectorType,
+            String order,
+            int limit,
+            String cursor) {
+        StationPowerCursorCodec.PowerCursor decodedCursor = powerCursorCodec.decode(cursor, order);
+        List<StationRepository.StationPowerView> powerRows = stationRepository.findByCityOrderByPower(
+                city, connectorType, order, decodedCursor.powerSortValue(), decodedCursor.stationId(),
+                PageRequest.of(0, limit + 1));
+        boolean hasMore = powerRows.size() > limit;
+        List<StationRepository.StationPowerView> pageRows = hasMore
+                ? powerRows.subList(0, limit)
+                : powerRows;
+        List<Long> stationIds = pageRows.stream()
+                .map(StationRepository.StationPowerView::getStationId)
+                .toList();
+        Map<Long, Station> stationsById = new HashMap<>();
+        stationRepository.findAllById(stationIds)
+                .forEach(station -> stationsById.put(station.getStationId(), station));
+        List<Station> stations = stationIds.stream().map(stationsById::get).toList();
+        Map<Long, List<String>> connectorTypesByStationId = loadConnectorTypes(stations);
+        Map<Long, StationRepository.StationMetricsView> metricsByStationId = loadMetrics(stations);
+        List<StationResponse> items = pageRows.stream()
+                .map(row -> toResponse(
+                        stationsById.get(row.getStationId()),
+                        connectorTypesByStationId.getOrDefault(row.getStationId(), List.of()),
+                        metricsByStationId.get(row.getStationId())))
+                .toList();
+        String nextCursor = null;
+        if (hasMore) {
+            StationRepository.StationPowerView last = pageRows.getLast();
+            BigDecimal sortValue = last.getMaxPowerKw() == null
+                    ? new BigDecimal(order.equals("desc") ? "-1" : "1000000")
+                    : last.getMaxPowerKw();
+            nextCursor = powerCursorCodec.encode(order, sortValue, last.getStationId());
         }
         return new StationSearchResponse(items, nextCursor);
     }
@@ -208,24 +261,34 @@ public class StationService {
         return connectorTypesByStationId;
     }
 
+    private Map<Long, StationRepository.StationMetricsView> loadMetrics(List<Station> stations) {
+        if (stations.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> stationIds = stations.stream().map(Station::getStationId).toList();
+        Map<Long, StationRepository.StationMetricsView> metricsByStationId = new HashMap<>();
+        stationRepository.findMetricsByStationIds(stationIds)
+                .forEach(metrics -> metricsByStationId.put(metrics.getStationId(), metrics));
+        return metricsByStationId;
+    }
+
     private StationResponse toResponse(Station station, List<String> connectorTypes) {
-        return toResponse(station, connectorTypes, null, 0L);
+        return toResponse(station, connectorTypes, null);
     }
 
     private StationResponse toResponse(
             Station station,
             List<String> connectorTypes,
-            BigDecimal averageRating,
-            long reviewCount) {
+            StationRepository.StationMetricsView metrics) {
         return new StationResponse(
                 station.getStationId(),
                 station.getStationName(),
                 formatAddress(station),
                 station.getCity(),
                 connectorTypes,
-                null,
-                averageRating,
-                reviewCount);
+                metrics == null ? null : metrics.getMaxPowerKw(),
+                metrics == null ? null : metrics.getAverageRating(),
+                metrics == null ? 0 : metrics.getReviewCount());
     }
 
     private void validateSearch(String city, int limit) {

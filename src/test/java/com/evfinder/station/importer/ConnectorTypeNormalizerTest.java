@@ -11,12 +11,12 @@ class ConnectorTypeNormalizerTest {
 
     @Test
     void normalizesMultipleAfdcConnectorCodes() {
-        List<String> names = ConnectorTypeNormalizer.normalize("CHADEMO J1772 J1772COMBO TESLA")
+        List<String> names = ConnectorTypeNormalizer.normalize("CHADEMO J1772 J1772COMBO TESLA J3271")
                 .stream()
                 .map(ConnectorTypeNormalizer.NormalizedConnector::name)
                 .toList();
 
-        assertEquals(List.of("CHAdeMO", "J1772", "CCS", "NACS"), names);
+        assertEquals(List.of("CHAdeMO", "J1772", "CCS", "NACS", "MCS"), names);
     }
 
     @Test

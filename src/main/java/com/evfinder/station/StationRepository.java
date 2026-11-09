@@ -81,6 +81,58 @@ public interface StationRepository extends JpaRepository<Station, Long> {
             """, nativeQuery = true)
     StationRatingSummary findRatingSummaryByStationId(@Param("stationId") long stationId);
 
+    @Query(value = """
+            SELECT s.station_id AS stationId,
+                   MAX(sc.max_power_kw) AS maxPowerKw
+            FROM charging_stations s
+            LEFT JOIN station_connectors sc ON sc.station_id = s.station_id
+            LEFT JOIN connectors c ON c.connector_id = sc.connector_id
+            WHERE s.city = :city
+              AND (:connectorType IS NULL OR EXISTS (
+                    SELECT 1
+                    FROM station_connectors filter_sc
+                    JOIN connectors filter_c ON filter_c.connector_id = filter_sc.connector_id
+                    WHERE filter_sc.station_id = s.station_id
+                      AND filter_c.connector_name = :connectorType
+              ))
+            GROUP BY s.station_id
+            HAVING :afterStationId = 0
+                OR (:sortOrder = 'desc' AND (
+                    COALESCE(MAX(sc.max_power_kw), -1) < :afterPower
+                    OR (COALESCE(MAX(sc.max_power_kw), -1) = :afterPower
+                        AND s.station_id > :afterStationId)
+                ))
+                OR (:sortOrder = 'asc' AND (
+                    COALESCE(MAX(sc.max_power_kw), 1000000) > :afterPower
+                    OR (COALESCE(MAX(sc.max_power_kw), 1000000) = :afterPower
+                        AND s.station_id > :afterStationId)
+                ))
+            ORDER BY
+                CASE WHEN :sortOrder = 'desc' THEN COALESCE(MAX(sc.max_power_kw), -1) END DESC,
+                CASE WHEN :sortOrder = 'asc' THEN COALESCE(MAX(sc.max_power_kw), 1000000) END ASC,
+                s.station_id ASC
+            """, nativeQuery = true)
+    List<StationPowerView> findByCityOrderByPower(
+            @Param("city") String city,
+            @Param("connectorType") String connectorType,
+            @Param("sortOrder") String sortOrder,
+            @Param("afterPower") BigDecimal afterPower,
+            @Param("afterStationId") long afterStationId,
+            Pageable pageable);
+
+    @Query(value = """
+            SELECT s.station_id AS stationId,
+                   MAX(sc.max_power_kw) AS maxPowerKw,
+                   AVG(r.rating) AS averageRating,
+                   COUNT(DISTINCT r.review_id) AS reviewCount
+            FROM charging_stations s
+            LEFT JOIN station_connectors sc ON sc.station_id = s.station_id
+            LEFT JOIN reviews r ON r.station_id = s.station_id
+            WHERE s.station_id IN (:stationIds)
+            GROUP BY s.station_id
+            """, nativeQuery = true)
+    List<StationMetricsView> findMetricsByStationIds(@Param("stationIds") Collection<Long> stationIds);
+
     interface StationRatingView {
         Long getStationId();
 
@@ -90,6 +142,22 @@ public interface StationRepository extends JpaRepository<Station, Long> {
     }
 
     interface StationRatingSummary {
+        BigDecimal getAverageRating();
+
+        Long getReviewCount();
+    }
+
+    interface StationPowerView {
+        Long getStationId();
+
+        BigDecimal getMaxPowerKw();
+    }
+
+    interface StationMetricsView {
+        Long getStationId();
+
+        BigDecimal getMaxPowerKw();
+
         BigDecimal getAverageRating();
 
         Long getReviewCount();

@@ -1,5 +1,6 @@
 package com.evfinder.station.importer;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -12,6 +13,7 @@ public final class ConnectorTypeNormalizer {
             "J1772COMBO", "CCS",
             "CHADEMO", "CHAdeMO",
             "TESLA", "NACS",
+            "J3271", "MCS",
             "NEMA1450", "NEMA 14-50",
             "NEMA515", "NEMA 5-15",
             "NEMA520", "NEMA 5-20");
@@ -32,11 +34,15 @@ public final class ConnectorTypeNormalizer {
                     if (name == null) {
                         throw new IllegalArgumentException("Unsupported connector code: " + code);
                     }
-                    connectors.putIfAbsent(name, new NormalizedConnector(name, code));
+                    connectors.putIfAbsent(name, new NormalizedConnector(name, code, null, null));
                 });
         return List.copyOf(connectors.values());
     }
 
-    public record NormalizedConnector(String name, String afdcCode) {
+    public record NormalizedConnector(
+            String name,
+            String afdcCode,
+            Integer count,
+            BigDecimal maxPowerKw) {
     }
 }

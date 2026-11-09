@@ -9,9 +9,11 @@ EVFinder uses two different kinds of data during development:
 
 Automated tests must not depend on a live third-party API. A small, reviewed fixture should remain stable so the same test produces the same result every time.
 
-## Planned Real Data Source
+## Real Data Sources
 
-The primary candidate is the U.S. Department of Energy Alternative Fuels Data Center (AFDC) station dataset or API. Before importing data, verify:
+The primary source is the U.S. Department of Energy Alternative Fuels Data Center (AFDC). EVFinder uses a station snapshot for identity and location fields and the EV Charging Units CSV for connector counts and power ratings. The API key is stored only in the ignored local `.env`; `.env.example` contains a placeholder.
+
+Before importing a new snapshot, verify:
 
 - usage terms and attribution requirements;
 - authentication or API-key requirements;

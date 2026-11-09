@@ -45,8 +45,8 @@ Query parameters:
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `city` | string | Yes | City name, such as `Chicago` |
-| `connectorType` | string | No | `CCS`, `CHAdeMO`, or `J1772` |
-| `sort` | string | No | `rating`; omit for stable station-ID order |
+| `connectorType` | string | No | `CCS`, `CHAdeMO`, `J1772`, or `NACS` |
+| `sort` | string | No | `power` or `rating`; omit for stable station-ID order |
 | `order` | string | No | `asc` or `desc`; default: `desc` |
 | `limit` | integer | No | 1 to 100; default: 20 |
 | `cursor` | string | No | Cursor for the next page |
