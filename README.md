@@ -23,7 +23,9 @@ EVFinder 是一个面向美国电动车车主的充电站检索与推荐平台�
 
 ## 当前状态
 
-后端 MVP 主链路已经完成：Docker MySQL、AFDC CSV 幂等导入、城市与接口类型搜索、Cursor Pagination、站点详情、评价提交与列表、评分聚合及评分排序。当前本地数据集包含 2,079 个 Illinois 充电站，完整自动化测试连接本地 MySQL 运行。前端、地理半径搜索、Redis 和部署尚未实现。
+后端 MVP 主链路已经完成并通过用户闭环验收：Docker MySQL、AFDC CSV 幂等导入、城市与接口类型搜索、Cursor Pagination、站点详情、评价提交与列表、评分聚合，以及按评分和功率排序。
+
+当前 AFDC EV Charging Units 快照包含 7,208 条设备记录，聚合为 2,118 个唯一 Illinois 站点。开发数据库还保留了一条较早快照中的站点，因此本地验收时共有 2,119 个站点。原始数据文件和 API Key 不提交到 Git。前端、地理半径搜索、Redis 和部署属于 MVP 后续阶段。
 
 ## 规划技术栈
 
@@ -70,6 +72,8 @@ curl --fail --location \
   -Dspring-boot.run.arguments="--evfinder.import.file=data/raw/afdc_ev_charging_units_il.csv --server.port=0"
 ```
 
+The import is idempotent: rerunning the same file updates existing stations instead of creating duplicates. Connector counts are summed across equipment rows, while connector power uses the maximum reported kW value. Missing source values remain `null`.
+
 Core endpoints:
 
 - `GET /api/v1/health`
@@ -79,6 +83,43 @@ Core endpoints:
 - `GET /api/v1/stations/{stationId}`
 - `GET /api/v1/stations/{stationId}/reviews`
 - `POST /api/v1/stations/{stationId}/reviews`
+
+## MVP Acceptance Flow
+
+The MVP is accepted through a complete user-visible loop:
+
+1. Search for a station.
+2. Open its details.
+3. Submit a review.
+4. List the station's reviews.
+5. Open the details again and verify that `averageRating` and `reviewCount` changed.
+6. Submit the same user/station review again and verify that the existing review is returned without being overwritten.
+
+This flow was verified against the real local MySQL database. The temporary acceptance user and review were removed afterward, and the database returned to its original state.
+
+Example requests:
+
+```bash
+curl 'http://localhost:8080/api/v1/stations?city=Chicago&connectorType=CCS&sort=power&order=desc&limit=5'
+
+STATION_ID=3596 # Replace this with an ID returned by the search request.
+curl "http://localhost:8080/api/v1/stations/${STATION_ID}"
+
+curl -i -X POST "http://localhost:8080/api/v1/stations/${STATION_ID}/reviews" \
+  -H 'Content-Type: application/json' \
+  -d '{"userId":"demo-user-1","rating":5,"comment":"Fast and easy to access."}'
+
+curl "http://localhost:8080/api/v1/stations/${STATION_ID}/reviews"
+curl "http://localhost:8080/api/v1/stations/${STATION_ID}"
+```
+
+Automated verification:
+
+```bash
+./mvnw test
+```
+
+The current suite contains 54 tests covering health checks, station search and details, connector filtering, cursor pagination, reviews, rating aggregation, import normalization, and power sorting.
 
 Stop the database while keeping its data:
 
