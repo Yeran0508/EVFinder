@@ -58,6 +58,8 @@ Start the API:
 ./mvnw spring-boot:run
 ```
 
+Open `http://localhost:8080` to use the demo frontend. The responsive page is served directly by Spring Boot and supports station search, connector filtering, power/rating sorting, cursor pagination, station details, and review submission. No separate Node.js frontend server is required.
+
 Import an AFDC CSV file. The file is intentionally not committed to Git:
 
 ```bash

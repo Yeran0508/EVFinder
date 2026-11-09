@@ -24,4 +24,24 @@ class HealthControllerTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.status").value("ok"));
     }
+
+    @Test
+    void homePageIsServed() throws Exception {
+        mockMvc.perform(get("/index.html"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("EVFinder")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Search stations")));
+    }
+
+    @Test
+    void frontendAssetsAreServed() throws Exception {
+        mockMvc.perform(get("/app.js"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("text/javascript"));
+
+        mockMvc.perform(get("/styles.css"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("text/css"));
+    }
 }
